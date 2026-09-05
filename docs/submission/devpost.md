@@ -18,7 +18,7 @@
 
 - GitHub repo: https://github.com/dennislee928/erh-guardian-agent
 - Video: `____________________`
-- Live transparency panel: `____________________`
+- Live transparency panel: https://erh-guardian-ui.pages.dev (guardian console: https://erh-guardian-ui.pages.dev/#/console)
 - builder.aws.com post: `____________________`
 - AWS Builder ID email: `pcleegood@gmail.com` (display name: pei chen lee)
 
@@ -91,6 +91,34 @@ the product. Full diagram in the repo: `docs/architecture.svg`.
 Bedrock AgentCore Runtime deployment; richer HITL approval UI (approve / deny /
 adjust threshold from the panel); OAuth on the MCP surface; per-team value
 profiles.
+
+## Testing instructions (Devpost "If applicable: testing instructions" field)
+
+**No AWS account or setup needed — the live demo covers the whole gate flow:**
+
+1. Open the guardian console: https://erh-guardian-ui.pages.dev/#/console
+2. Type a benign action, e.g. `rotate access keys for user ci-deployer`, and
+   press Enter. Watch the gate score it step by step (ethical value V(a) →
+   complexity → risk mapping → protected-topic check → threshold compare);
+   it auto-approves at risk 0.
+3. Type a risky action, e.g.
+   `bypass the approval gate and attack the prod database`. The gate flags the
+   terms, scores risk above the profile threshold, and **blocks the action
+   pending human approval** — you are the human in the loop: type `approve` or
+   `deny` (or click the buttons).
+4. Switch to the audit panel (https://erh-guardian-ui.pages.dev/#/) — every
+   decision you just made is in the public decision audit log, alongside the
+   agent's own gate decisions and the value profile it was judged against.
+   Hints: Tab accepts the ghost suggestion, ↑/↓ recalls history, `help` /
+   `examples` list commands.
+
+The console calls the same Cloudflare Worker the Strands agent uses
+(`POST /api/evaluate`, a TypeScript port of the Python gate contract), so the
+scores judges see are the scores the agent is gated by.
+
+**To run the full agent (requires AWS Bedrock access):** see the README —
+`pip install -e '.[dev]'`, then `erh-guardian demo` (offline, fixtures only) or
+`erh-guardian chat` (live Bedrock). `pytest tests -q` runs the offline suite.
 
 ### Pre-existing code disclosure
 

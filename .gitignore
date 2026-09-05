@@ -9,3 +9,6 @@ build/
 .env
 profile.local.json
 .ignore.txt
+docs/.ignore/
+.DS_Store
+/docs/submission

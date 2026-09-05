@@ -44,6 +44,22 @@ protected topic "wildcard admin access" halts at an approval prompt; typing
 `n` really does stop execution, and the blocked decision appears on the live
 panel seconds later.
 
+## Try it yourself: the guardian console
+
+You don't need an AWS account to feel the gate. The transparency panel ships a
+terminal-style **guardian console** —
+https://erh-guardian-ui.pages.dev/#/console — where you propose an action and
+watch the gate score it live, step by step: ethical value V(a) → decision
+complexity → risk mapping → protected-topic check → threshold compare. Benign
+actions auto-approve; risky ones (try
+`bypass the approval gate and attack the prod database`) are **blocked pending
+human approval**, and *you* are the human in the loop — type `approve` or
+`deny` right in the terminal. Every verdict lands in the public audit log.
+
+The console hits the same Cloudflare Worker the agent uses: a public
+`POST /api/evaluate` endpoint backed by a TypeScript port of the Python gate
+contract, so the numbers a reader sees are the numbers the agent is gated by.
+
 ## An honest-scoring detail: over-refusal is also a failure
 
 While wiring the engine to Bedrock (`bedrock-runtime` Converse), I fixed a
@@ -61,11 +77,12 @@ Cloudflare Worker (Durable Object + D1/Drizzle; bearer-token write surface) ⇄
 React/Vite transparency panel reading a deliberately public, read-only API —
 because the audit trail *is* the product.
 
-*(Insert docs/architecture.png here.)*
+*(Insert docs/architecture.png here; optionally docs/submission/cards/f3-gate.png
+in the GuardianGate section.)*
 
 ## Links
 
 - Repo: https://github.com/dennislee928/erh-guardian-agent
-- Demo video: `____________________`
-- Live panel: `____________________`
+- Demo video: `____________________` <!-- TODO: upload docs/submission/draft-cut.mp4 (YouTube/Vimeo), then fill -->
+- Live panel: https://erh-guardian-ui.pages.dev (guardian console: https://erh-guardian-ui.pages.dev/#/console)
 - Upstream engine fix: https://github.com/dennislee928/Ethic-Latex/pull/95
