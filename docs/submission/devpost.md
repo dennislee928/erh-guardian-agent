@@ -19,7 +19,7 @@
 - GitHub repo: https://github.com/dennislee928/erh-guardian-agent
 - Video: `____________________`
 - Live transparency panel: https://erh-guardian-ui.pages.dev (guardian console: https://erh-guardian-ui.pages.dev/#/console)
-- builder.aws.com post: `____________________`
+- builder.aws.com post: https://builder.aws.com/content/3IuDJLRblyBz7XOD1Hu2hdDOHkC/agents-for-humans-measuring-agent-ethics-with-the-ethical-riemann-hypothesis
 - AWS Builder ID email: `pcleegood@gmail.com` (display name: pei chen lee)
 
 ---

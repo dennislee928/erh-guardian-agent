@@ -1,4 +1,5 @@
-# builder.aws.com draft — publish by Sep 13, link it in the Devpost description
+# builder.aws.com draft — PUBLISHED Sep 5, 2026:
+# https://builder.aws.com/content/3IuDJLRblyBz7XOD1Hu2hdDOHkC/agents-for-humans-measuring-agent-ethics-with-the-ethical-riemann-hypothesis
 
 > Title (must contain "Agents for Humans"):
 > **Agents for Humans: measuring agent ethics with the Ethical Riemann Hypothesis**
