@@ -256,7 +256,9 @@ export default function Console() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={onKeyDown}
-                  placeholder={ghost ? "" : `try: ${EXAMPLES[exampleIdx]}`}
+                  placeholder={
+                    ghost ? "" : pendingId != null ? "approve / deny" : `try: ${EXAMPLES[exampleIdx]}`
+                  }
                   disabled={busy}
                   autoFocus
                   spellCheck={false}
