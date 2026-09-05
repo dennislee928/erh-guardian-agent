@@ -66,7 +66,10 @@ The GuardianGate decision path in isolation:
 - `src/erh_guardian/` — Strands agent: ERH tools, GuardianGate (HITL hook), CLI
 - `mcp-worker/` — Cloudflare Worker MCP server: value profiles + decision audit log on D1
   (streamable HTTP `/mcp`, SSE `/sse`, REST `/api/*` for the panel)
-- `ui/` — transparency panel (Vite + React): profile, risk bars, ERH verdicts
+- `ui/` — transparency panel (Vite + React): profile, risk bars, ERH verdicts, and a
+  terminal-style **guardian console** (`#/console`) where anyone can propose an action,
+  watch the gate score it step by step, and resolve blocked decisions as the human
+  in the loop (backed by the worker's public `POST /api/evaluate` sandbox endpoint)
 - `tests/` — offline tests (no Bedrock/AWS calls)
 
 ## Setup
