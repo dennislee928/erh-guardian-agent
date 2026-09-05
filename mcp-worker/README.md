@@ -35,6 +35,21 @@ once the secret is set; requests without it get a 401. `GET /api/profile`,
 transparency panel. When `MCP_AUTH_TOKEN` is unset (local `wrangler dev`), the guard is
 skipped and a warning is logged.
 
+The guardian-console sandbox endpoints are also public by design (the panel's
+terminal is the demo surface): they only write console-tagged rows, with tight
+input caps.
+
+## Guardian console (public sandbox)
+
+- `POST /api/evaluate` — `{ "action_text": "...", "tool_name"?, "profile_id"? }`.
+  Scores the proposed action with the same gate contract as the Python agent
+  (`src/gate.ts`, a port of `erh_guardian.gate.decide` + `guardian_risk` on the
+  ERH engine's deterministic lexical fallback), logs the decision
+  (`auto_approved` or `blocked`), and returns the verdict plus a step-by-step
+  `trace` of the gate's reasoning.
+- `POST /api/decisions/:id/approve` — human-in-the-loop resolution: flips one
+  `blocked` decision to `human_approved` (409 if it isn't pending).
+
 ## Connecting from the Strands agent
 
 ```python
