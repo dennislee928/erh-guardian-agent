@@ -9,10 +9,11 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { drizzle } from "drizzle-orm/d1";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { decisions, profiles } from "./db/schema";
+import { decide, type GateDecision, type GateProfile } from "./gate";
 
 export interface Env {
   DB: D1Database;
@@ -159,6 +160,136 @@ function requireAuth(request: Request, env: Env): Response | null {
   );
 }
 
+// ── Guardian console (public sandbox surface for the transparency panel) ──
+//
+// The panel's terminal lets anyone propose an action and watch the gate score
+// it with the same contract the Python agent uses. These endpoints are public
+// by design (like the read-only GETs): they only write console-tagged rows to
+// the shared audit log, with tight input caps.
+
+const evaluateBody = z.object({
+  action_text: z.string().trim().min(1).max(2000),
+  tool_name: z.string().trim().min(1).max(64).default("console_proposal"),
+  profile_id: z.string().trim().min(1).max(64).default("default"),
+});
+
+const DEFAULT_GATE_PROFILE: GateProfile = {
+  riskThreshold: 40,
+  protectedTopics: [],
+  autoApproveTools: [],
+};
+
+/** Human-readable replay of the gate's reasoning, one line per step. */
+function gateTrace(d: GateDecision): Array<{ label: string; detail: string }> {
+  const trace = [
+    {
+      label: "parse",
+      detail: `tool=${d.toolName} · ${d.actionText.split(/\s+/).filter(Boolean).length} tokens`,
+    },
+    {
+      label: "ethical value",
+      detail:
+        `V(a) = ${d.ethicalValue.toFixed(2)} in [-1, 1]` +
+        (d.matchedTerms.length
+          ? ` — flagged terms: ${d.matchedTerms.join(", ")}`
+          : " — no flagged terms"),
+    },
+    {
+      label: "complexity",
+      detail: `x = ${d.complexity.toFixed(1)} (tokens/20 + 2·clauses, clamped to [1, 100])`,
+    },
+    {
+      label: "risk mapping",
+      detail: `risk = (1 - V)/2 · 100 + uplift(min(20, x/5)) = ${d.riskScore.toFixed(1)}/100`,
+    },
+    {
+      label: "protected topics",
+      detail: d.protectedTopic
+        ? `HIT — action touches protected topic '${d.protectedTopic}'`
+        : "clear — no protected topic touched",
+    },
+  ];
+  if (d.autoApprovedTool) {
+    trace.push({
+      label: "gate",
+      detail: `tool '${d.toolName}' is on the profile's auto-approve list — gate bypassed`,
+    });
+  } else {
+    trace.push({
+      label: "gate",
+      detail: `risk ${d.riskScore.toFixed(1)} vs threshold ${d.threshold.toFixed(0)} → ${
+        d.needsApproval ? "BLOCKED pending human approval" : "auto-approved"
+      }`,
+    });
+  }
+  return trace;
+}
+
+async function handleConsole(
+  request: Request,
+  pathname: string,
+  env: Env,
+): Promise<Response | null> {
+  if (request.method !== "POST") return null;
+  const db = drizzle(env.DB);
+
+  if (pathname === "/api/evaluate") {
+    let body: z.infer<typeof evaluateBody>;
+    try {
+      body = evaluateBody.parse(await request.json());
+    } catch (err) {
+      return Response.json(
+        { error: "bad_request", detail: err instanceof z.ZodError ? err.issues : String(err) },
+        { status: 400, headers: CORS },
+      );
+    }
+    const rows = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, body.profile_id))
+      .limit(1);
+    const profile: GateProfile = rows[0] ?? DEFAULT_GATE_PROFILE;
+    const decision = decide(profile, body.tool_name, body.action_text);
+    const verdict = decision.needsApproval ? "blocked" : "auto_approved";
+    const inserted = await db
+      .insert(decisions)
+      .values({
+        profileId: body.profile_id,
+        toolName: decision.toolName,
+        actionText: decision.actionText,
+        riskScore: decision.riskScore,
+        ethicalValue: decision.ethicalValue,
+        verdict,
+        createdAt: new Date(),
+      })
+      .returning({ id: decisions.id });
+    return Response.json(
+      { id: inserted[0]?.id, verdict, trace: gateTrace(decision), ...decision },
+      { headers: CORS },
+    );
+  }
+
+  // Human-in-the-loop resolution: flip one blocked row to human_approved.
+  const approve = pathname.match(/^\/api\/decisions\/(\d+)\/approve$/);
+  if (approve) {
+    const id = Number(approve[1]);
+    const updated = await db
+      .update(decisions)
+      .set({ verdict: "human_approved" })
+      .where(and(eq(decisions.id, id), eq(decisions.verdict, "blocked")))
+      .returning({ id: decisions.id, verdict: decisions.verdict });
+    if (!updated.length) {
+      return Response.json(
+        { error: "not_pending", detail: "No blocked decision with that id." },
+        { status: 409, headers: CORS },
+      );
+    }
+    return Response.json(updated[0], { headers: CORS });
+  }
+
+  return null;
+}
+
 // Read-only REST endpoints feeding the transparency panel UI.
 async function handleApi(pathname: string, url: URL, env: Env): Promise<Response | null> {
   const db = drizzle(env.DB);
@@ -194,6 +325,9 @@ export default {
     }
 
     if (pathname.startsWith("/api/")) {
+      // Public console surface: evaluate + human approval, console-tagged rows only.
+      const consoleResponse = await handleConsole(request, pathname, env);
+      if (consoleResponse) return consoleResponse;
       // GETs feed the public transparency panel; anything else needs the token.
       if (request.method !== "GET") {
         const denied = requireAuth(request, env);

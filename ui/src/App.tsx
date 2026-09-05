@@ -8,6 +8,7 @@ import {
   TerminalBlink,
   nothing,
 } from "@dennislee928/nothingx-react-components";
+import Console from "./Console";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
@@ -49,7 +50,17 @@ function riskClass(score: number, threshold: number): string {
   return "risk low";
 }
 
-export default function App() {
+function useHashRoute(): string {
+  const [route, setRoute] = useState(() => window.location.hash || "#/");
+  useEffect(() => {
+    const onChange = () => setRoute(window.location.hash || "#/");
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return route;
+}
+
+function Panel() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [rows, setRows] = useState<Decision[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -82,22 +93,7 @@ export default function App() {
   const blocked = rows.filter((r) => r.verdict === "blocked").length;
 
   return (
-    <main>
-      <header>
-        <div className="masthead">
-          <h1>
-            <GlitchText active>ERH Guardian</GlitchText>
-          </h1>
-          <PillBadge variant="live">watching</PillBadge>
-        </div>
-        <p className="sub">
-          <TerminalBlink>
-            Transparency panel — every consequential agent action, scored before it ran.
-          </TerminalBlink>
-        </p>
-        <DottedDivider />
-      </header>
-
+    <>
       {error && <div className="banner">{error}</div>}
 
       <section className="cards">
@@ -143,7 +139,10 @@ export default function App() {
       <section className="card">
         <h2>☨ Decision audit log</h2>
         {rows.length === 0 ? (
-          <p className="muted">No decisions logged yet — run the agent.</p>
+          <p className="muted">
+            No decisions logged yet — run the agent, or propose one yourself in the{" "}
+            <a href="#/console">console</a>.
+          </p>
         ) : (
           <div className="tablewrap">
             <table>
@@ -189,6 +188,40 @@ export default function App() {
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+export default function App() {
+  const route = useHashRoute();
+  const view = route.startsWith("#/console") ? "console" : "panel";
+
+  return (
+    <main>
+      <header>
+        <div className="masthead">
+          <h1>
+            <GlitchText active>ERH Guardian</GlitchText>
+          </h1>
+          <PillBadge variant="live">watching</PillBadge>
+        </div>
+        <p className="sub">
+          <TerminalBlink>
+            Transparency panel — every consequential agent action, scored before it ran.
+          </TerminalBlink>
+        </p>
+        <nav className="topnav">
+          <a href="#/" className={view === "panel" ? "active" : ""}>
+            † audit panel
+          </a>
+          <a href="#/console" className={view === "console" ? "active" : ""}>
+            † guardian console
+          </a>
+        </nav>
+        <DottedDivider />
+      </header>
+
+      {view === "console" ? <Console /> : <Panel />}
 
       <footer>
         <DottedDivider />
